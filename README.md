@@ -30,11 +30,17 @@ A comprehensive, structured repository designed for mastering multithreading, co
   * `Condition` Variables: Multi-condition wait-sets for Bounded Buffers.
   * High-Level Synchronizers: `CountDownLatch` and `Semaphore`.
 
+* **[Module 04: Atomic Variables & Lock-Free Programming](src/main/java/com/example/module04_atomics/README.md)**
+  * Hardware-level Compare-And-Swap (CAS) mechanism.
+  * CAS Loop pattern (Optimistic Locking): Read → Compute → CAS → Retry.
+  * The ABA Problem and the `AtomicStampedReference` solution.
+  * Lock-Free Counter using `AtomicInteger`.
+  * Lock-Free Stack using `AtomicReference`.
+
 ---
 
 ### 🟡 Upcoming Modules
 
-* **Module 04: Atomic Variables & Lock-Free Programming**
 * **Module 05: Concurrent Collections**
 * **Module 06: Executor Framework & Thread Pools**
 
