@@ -33,6 +33,12 @@ A practical guide to hardware-level atomic operations, the Compare-And-Swap (CAS
    - By applying CAS loops to pointer/reference updates, entire data structures (stacks, queues, lists) can be made thread-safe without any locks.
    - **Guarantee:** At least one thread always makes progress, eliminating the risk of deadlock entirely.
 
+6. **`LongAdder` & `DoubleAdder` — High-Throughput Counters:**
+   - Under extreme contention, many threads retrying `AtomicLong.incrementAndGet()` on the **same** memory cell waste CPU cycles spinning.
+   - `LongAdder` solves this by maintaining a **dynamic array of `Cell` objects** (striped counters). Each contending thread is hashed to its own `Cell` and increments it independently — eliminating shared-state contention.
+   - The true total is computed only on demand by calling `sum()`, which adds the base value plus all active `Cell` values.
+   - **Trade-off:** `sum()` is NOT an instantaneous atomic snapshot; it's eventually consistent. Use `AtomicLong` when you need a globally precise real-time value (e.g., a sequence ID). Use `LongAdder` when you need maximum write throughput for a cumulative counter (e.g., a web-request counter, metrics collection).
+
 ---
 
 ## ⚙️ CAS in Practice
@@ -64,6 +70,18 @@ public int increment() {
 
 ---
 
+## ⚡ `AtomicLong` vs. `LongAdder` — When to Use Which?
+
+| Feature | `AtomicLong` | `LongAdder` |
+| :--- | :--- | :--- |
+| **Internal mechanism** | Single CAS on one shared cell | Striped `Cell[]` array — one cell per contending thread |
+| **Write throughput (high contention)** | ❌ Degrades — threads spin on same cell | ✅ Scales linearly — threads operate independently |
+| **`sum()` / `get()` consistency** | ✅ Atomic snapshot — always accurate | ⚠️ Eventually consistent — not an atomic snapshot |
+| **Memory footprint** | Low — one `long` field | Higher — grows with thread count |
+| **Best use case** | Sequence IDs, atomic read-modify-write | High-throughput counters (metrics, stats, events) |
+
+---
+
 ## 📂 Module Files & Demos
 
 | File Name | Key Concept Demonstrated |
@@ -74,5 +92,7 @@ public int increment() {
 | `aba/ABAStampedSolutionDemo.java` | Solves the ABA problem using `AtomicStampedReference` — stamp mismatch blocks incorrect CAS |
 | `stack/LockFreeStack.java` | Generic lock-free stack built on `AtomicReference` with CAS-based `push()` and `pop()` |
 | `stack/LockFreeStackDemo.java` | Two threads push 1,000 items each concurrently; verifies all 2,000 items are present |
+| `adders/LongAdderVsAtomicLongDemo.java` | Benchmarks 10 threads × 10M increments: measures wall-clock time for `AtomicLong` vs. `LongAdder` side-by-side to demonstrate throughput gains under high contention |
 
 ---
+

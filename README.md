@@ -36,6 +36,7 @@ A comprehensive, structured repository designed for mastering multithreading, co
   * The ABA Problem and the `AtomicStampedReference` solution.
   * Lock-Free Counter using `AtomicInteger`.
   * Lock-Free Stack using `AtomicReference`.
+  * `LongAdder` vs. `AtomicLong`: Striped-cell architecture for high-throughput counters under heavy contention.
 
 ---
 
