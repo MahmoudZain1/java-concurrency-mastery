@@ -38,11 +38,15 @@ A comprehensive, structured repository designed for mastering multithreading, co
   * Lock-Free Stack using `AtomicReference`.
   * `LongAdder` vs. `AtomicLong`: Striped-cell architecture for high-throughput counters under heavy contention.
 
+* **[Module 05: Concurrent Collections](src/main/java/com/example/module05_collections/README.md)**
+  * Thread-safe collections in `java.util.concurrent` vs. `Collections.synchronized*` wrappers.
+  * `ConcurrentHashMap`: Lock-free reads, CAS-based writes, and atomic compound operations (`merge`, `compute`, `putIfAbsent`).
+  * `CopyOnWriteArrayList`: Copy-on-write snapshots.
+
 ---
 
 ### 🟡 Upcoming Modules
 
-* **Module 05: Concurrent Collections**
 * **Module 06: Executor Framework & Thread Pools**
 
 ---
