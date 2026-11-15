@@ -1,6 +1,6 @@
 # Module 05: Concurrent Collections
 
-A practical guide to thread-safe collections in `java.util.concurrent` — concurrent maps and copy-on-write lists.
+A practical guide to thread-safe collections in `java.util.concurrent` — concurrent maps, copy-on-write lists, and composing them for thread-safe pub-sub workflows.
 
 ---
 
@@ -30,6 +30,14 @@ A thread-safe `ArrayList` variant for read-heavy, write-rare workloads.
 - **Snapshot iterators:** An iterator reads the array captured at creation and never reflects later modifications.
 - **No `ConcurrentModificationException`** from concurrent modification.
 - **Write cost:** Every mutation takes `O(n)` time and extra memory.
+
+### 4. Composing Concurrent Collections (`ConcurrentHashMap` + `CopyOnWriteArrayList`)
+
+Real-world services often nest concurrent collections — for example, mapping each user ID to their active listeners (`Map<String, CopyOnWriteArrayList<NotificationListener>>`):
+
+- **`ConcurrentHashMap`** manages concurrent access across different keys (users) and provides atomic per-key initialization and cleanup via `compute()` and `computeIfPresent()`.
+- **`CopyOnWriteArrayList`** stores each user's listeners so notifications can iterate safely without holding a lock while subscribers connect or disconnect.
+- **`addIfAbsent()`** prevents duplicate listener registration atomically within the `CopyOnWriteArrayList`.
 
 ---
 
@@ -91,6 +99,31 @@ Final count: 10,000
 
 Keep the remapping function short, and do not modify other mappings of the same map from inside it.
 
+### Atomic Lifecycle Management with `compute()` & `computeIfPresent()`
+
+When managing per-key `CopyOnWriteArrayList` entries (such as in `InAppNotificationService`), `compute()` and `computeIfPresent()` keep map-level updates atomic per key:
+
+```java
+// Subscribe: initialize list if absent and avoid duplicate listeners
+emitters.compute(userId, (key, listeners) -> {
+    if (listeners == null) {
+        listeners = new CopyOnWriteArrayList<>();
+    }
+    listeners.addIfAbsent(listener);
+    return listeners;
+});
+
+// Unsubscribe: remove listener and evict the key when no listeners remain
+emitters.computeIfPresent(userId, (key, listeners) -> {
+    listeners.remove(listener);
+    return listeners.isEmpty() ? null : listeners;
+});
+```
+
+- Returning `null` from `computeIfPresent()` atomically removes the map entry, preventing empty `CopyOnWriteArrayList` instances from accumulating after users disconnect.
+- Because `compute()` and `computeIfPresent()` serialize updates to the same key, a concurrent `subscribe()` cannot race with an `unsubscribe()` removing an empty list.
+- Delivery (`sendNotification()` / `broadcastNotification()`) reads `emitters.get(userId)` and traverses the `CopyOnWriteArrayList` snapshot without blocking writers.
+
 ---
 
 ## 🔒 Safe Idioms & Best Practices
@@ -119,6 +152,10 @@ Individual `get()` and `put()` calls are thread-safe, but combining them does no
 - A `CopyOnWriteArrayList` iterator never reflects modifications made after its creation; create a new iterator for a newer view.
 - A direct `get(index)` reads the list's current array, not an existing iterator's snapshot.
 
+### Avoid Compound Races on Nested Collections
+
+- Do not use `get()` + `put()` or `remove()` outside a remapping function when creating or deleting nested lists; use `compute()` and `computeIfPresent()` so creation and empty-list eviction are atomic per key.
+
 ---
 
 ## 📂 Module Files & Demos
@@ -127,3 +164,6 @@ Individual `get()` and `put()` calls are thread-safe, but combining them does no
 | :--- | :--- |
 | `copyonwrite/CopyOnWriteArrayListDemo.java` | A reader iterates a subscriber list while a writer adds a subscriber — snapshot iteration without `ConcurrentModificationException`. |
 | `map/ConcurrentHashMapDemo.java` | 10 threads × 1,000 atomic `merge(key, 1L, Long::sum)` calls on one key; the final count is exactly 10,000. |
+| `notification/NotificationListener.java` | `@FunctionalInterface` callback contract (`onMessage`) for receiving notifications. |
+| `notification/InAppNotificationService.java` | Thread-safe notification service combining `ConcurrentHashMap` (`compute`, `computeIfPresent`) and `CopyOnWriteArrayList` (`addIfAbsent`, snapshot iteration) for subscribe, unsubscribe, targeted send, and broadcast. |
+| `notification/NotificationServiceDemo.java` | Demonstrates concurrent notification delivery and unsubscription for one user followed by a system-wide broadcast to remaining subscribers. |

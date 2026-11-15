@@ -42,6 +42,7 @@ A comprehensive, structured repository designed for mastering multithreading, co
   * Thread-safe collections in `java.util.concurrent` vs. `Collections.synchronized*` wrappers.
   * `ConcurrentHashMap`: Lock-free reads, CAS-based writes, and atomic compound operations (`merge`, `compute`, `putIfAbsent`).
   * `CopyOnWriteArrayList`: Copy-on-write snapshots.
+  * Composing `ConcurrentHashMap` + `CopyOnWriteArrayList`: Thread-safe in-app notification service with atomic subscribe/unsubscribe lifecycle (`compute`, `computeIfPresent`, `addIfAbsent`).
 
 ---
 
